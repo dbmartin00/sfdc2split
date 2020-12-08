@@ -55,12 +55,12 @@ public class App
 				.post(body)
 				.build();
 
+		System.out.println("POST " + url);
 		Response loginResponse = client.newCall(request).execute();
 		System.out.println("success getting token?\t" + loginResponse.isSuccessful());
 
 		JSONObject loginObject = new JSONObject(loginResponse.body().string());
-		System.out.println(loginObject.toString(2));
-
+		
 		String token = loginObject.getString("access_token");
 
 		String queryUrl = "https://splitsoftware-dev-ed.my.salesforce.com/services/data/v50.0/query/?q=SELECT+name,AnnualRevenue+from+Account+WHERE+name='" + account_id + "'";
@@ -69,6 +69,7 @@ public class App
 				.header("Authorization", "Bearer " + token)
 				.build();
 
+		System.out.println("GET " + queryUrl);
 		Response queryResponse = client.newCall(accountRequest).execute();
 		System.out.println("success getting accounts by revenue?\t" + queryResponse.isSuccessful());
 		JSONObject accountsObject = new JSONObject(queryResponse.body().string());
