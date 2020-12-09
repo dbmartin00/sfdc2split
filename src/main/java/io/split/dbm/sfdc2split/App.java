@@ -8,8 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeoutException;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.squareup.okhttp.MediaType;
@@ -62,8 +65,32 @@ public class App
 		JSONObject loginObject = new JSONObject(loginResponse.body().string());
 		
 		String token = loginObject.getString("access_token");
-
-		String queryUrl = "https://splitsoftware-dev-ed.my.salesforce.com/services/data/v50.0/query/?q=SELECT+name,AnnualRevenue+from+Account+WHERE+name='" + account_id + "'";
+		
+		String descUrl = "https://splitsoftware-dev-ed.my.salesforce.com/services/data/v50.0/sobjects/Account/describe/";
+		Request descRequest = new Request.Builder()
+				.url(descUrl)
+				.header("Authorization", "Bearer " + token)
+				.build();
+		
+		System.out.println("GET " + descUrl);
+		Response descResponse = client.newCall(descRequest).execute();
+		System.out.println("success getting description of Account?\t" + descResponse.isSuccessful());
+		String desc = descResponse.body().string();
+		JSONObject descObject = new JSONObject(desc);
+		JSONArray fieldsArray = descObject.getJSONArray("fields");
+		Set<String> names = new TreeSet<String>();
+		for(int i = 0; i < fieldsArray.length(); i++) {
+			JSONObject o = fieldsArray.getJSONObject(i);
+			names.add(o.getString("name"));
+		}
+		String oNames = "";
+		for(String name : names) {
+			System.out.println(name);
+			oNames += name + ","; 
+		}
+		oNames = oNames.substring(0, oNames.lastIndexOf(","));
+		
+		String queryUrl = "https://splitsoftware-dev-ed.my.salesforce.com/services/data/v50.0/query/?q=SELECT+" + oNames + "+from+Account+WHERE+name='" + account_id + "'";
 		Request accountRequest = new Request.Builder()
 				.url(queryUrl)
 				.header("Authorization", "Bearer " + token)
