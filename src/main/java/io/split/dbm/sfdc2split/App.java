@@ -8,7 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeoutException;
 
@@ -85,7 +87,7 @@ public class App
 		}
 		String oNames = "";
 		for(String name : names) {
-			System.out.println(name);
+			//System.out.println(name);
 			oNames += name + ","; 
 		}
 		oNames = oNames.substring(0, oNames.lastIndexOf(","));
@@ -100,11 +102,17 @@ public class App
 		Response queryResponse = client.newCall(accountRequest).execute();
 		System.out.println("success getting accounts by revenue?\t" + queryResponse.isSuccessful());
 		JSONObject accountsObject = new JSONObject(queryResponse.body().string());
-		System.out.println(accountsObject.toString(2));
+		//System.out.println(accountsObject.toString(2));
 
-		BigDecimal annual_revenue = accountsObject.getJSONArray("records").getJSONObject(0).getBigDecimal("AnnualRevenue");
-		System.out.println("Annual Revenue " + annual_revenue);
+		JSONObject recordsObject = accountsObject.getJSONArray("records").getJSONObject(0);
 
+		Map<String, Object> attributes = new TreeMap<String, Object>();
+		flattenIntoAttributes(attributes, recordsObject, "");
+		
+		for(Entry<String, Object> entry : attributes.entrySet()) {
+			System.out.println("ATTRIBUTES: " + entry.getKey() + " : " + entry.getValue());
+		}
+		
 		SplitClientConfig config = SplitClientConfig.builder()
 				.setBlockUntilReadyTimeout(5000)
 				.build();
@@ -112,9 +120,8 @@ public class App
 		try {
 			SplitClient split = SplitFactoryBuilder.build("1s46c6r6tfl9m7usijqsmicfckm04mn8b321", config).client();
 			split.blockUntilReady();
-
-			Map<String, Object> attributes = new HashMap<String, Object>();
-			attributes.put("annual_revenue_millions", annual_revenue.intValue() / 1000 / 1000);
+			double annual_revenue = ((Double)attributes.get("AnnualRevenue")) / 1000 / 1000;		
+			attributes.put("annual_revenue_millions", new Double(annual_revenue).intValue());		
 			System.out.println("attributes.get(annual_revenue_millions): " + attributes.get("annual_revenue_millions"));
 			String treatment = split.getTreatment(account_id, "sfdc_feature", attributes);
 			System.out.println("treatment: " + treatment);
@@ -126,6 +133,38 @@ public class App
 		
 	}
 
+	public Map<String, Object> flattenIntoAttributes(Map<String, Object> result, JSONObject o, String prefix) {
+		
+		for (String record : o.keySet()) {
+			Object r = o.get(record);
+			if(r instanceof Double) {
+				result.put(prefix + record, o.getDouble(record));
+			} else if (r instanceof Integer) {
+				result.put(prefix + record, o.getInt(record));
+			} else if (r instanceof Float) {
+				result.put(prefix + record, o.getFloat(record));
+			} else if (r instanceof Long) {
+				result.put(prefix + record, o.getLong(record));
+			} else if (r instanceof String) {
+				result.put(prefix + record, o.getString(record));
+			} else if (r instanceof Boolean) {
+				result.put(prefix + record, o.getBoolean(record));
+			} else if (r instanceof JSONObject) {
+				JSONObject jo = o.getJSONObject(record);
+				flattenIntoAttributes(result, jo, prefix + record + ".");
+			} else {
+				// not handling arrays, big decimals or nulls
+				if(o.isNull(record)) {
+					System.out.println("skipping null attribute '" + record + "'");
+				} else {
+					System.out.println("not handling attribute " + record + " - " + r.getClass().getName());
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	public static String readFile(String path)
 			throws IOException
 	{
