@@ -151,7 +151,7 @@ public class App
 				result.put(prefix + record, o.getBoolean(record));
 			} else if (r instanceof JSONObject) {
 				JSONObject jo = o.getJSONObject(record);
-				flattenIntoAttributes(result, jo, prefix + record + ".");
+				flattenIntoAttributes(result, jo, prefix + record + "__");
 			} else {
 				// not handling arrays, big decimals or nulls
 				if(o.isNull(record)) {
