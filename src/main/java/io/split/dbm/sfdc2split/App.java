@@ -124,7 +124,20 @@ public class App
 			attributes.put("annual_revenue_millions", new Double(annual_revenue).intValue());		
 			System.out.println("attributes.get(annual_revenue_millions): " + attributes.get("annual_revenue_millions"));
 			String treatment = split.getTreatment(account_id, "sfdc_feature", attributes);
-			System.out.println("treatment: " + treatment);
+			
+			switch(treatment) {
+			case "on":
+				System.out.println(ON_BANNER);
+				break;
+			case "off":
+				System.out.println(OFF_BANNER);
+				break;
+			case "control":
+				System.out.println(CONTROL_BANNER);
+				break;
+			default:
+				
+			}
 
 			split.destroy();
 		} catch (TimeoutException | InterruptedException | URISyntaxException | IOException e) {
@@ -166,10 +179,22 @@ public class App
 	}
 	
 	public static String readFile(String path)
-			throws IOException
 	{
-		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		byte[] encoded = null;
+		try {
+			encoded = Files.readAllBytes(Paths.get(path));
+		} catch (IOException ioe) {
+			System.err.println(ioe.getMessage());
+			ioe.printStackTrace(System.err);
+			System.exit(1);
+		}
 		return new String(encoded, Charset.defaultCharset());
 	}
+	
+	public static final String newLine = System.getProperty("line.separator");
+	public static final String ON_BANNER = readFile("on.banner");
+	public static final String OFF_BANNER = readFile("off.banner");
+	public static final String CONTROL_BANNER = readFile("control.banner");
+	
 
 }
